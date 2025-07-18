@@ -39,10 +39,11 @@ if [ ! -d "$REPO_PATH" ]; then
     exit 1
 fi
 
-# Clean up previous output if it exists
+# Check if output directory exists - don't delete for changelog history
 if [ -d "$OUTPUT_PATH" ]; then
-    echo -e "${BLUE}Cleaning up previous output...${NC}"
-    rm -rf "$OUTPUT_PATH"
+    echo -e "${BLUE}Memory bank directory exists - will update incrementally...${NC}"
+else
+    echo -e "${BLUE}Creating new memory bank directory...${NC}"
 fi
 
 # Try different builders in order of preference
