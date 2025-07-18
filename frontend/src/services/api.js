@@ -31,5 +31,54 @@ export const api = {
       throw new Error(`Failed to fetch file content: ${filename}`);
     }
     return response.json();
+  },
+
+  // Build job API methods
+  async createBuildJob(buildRequest) {
+    const response = await fetch(`${API_BASE_URL}/builds`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildRequest),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create build job');
+    }
+    return response.json();
+  },
+
+  async getBuildJobs() {
+    const response = await fetch(`${API_BASE_URL}/builds`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch build jobs');
+    }
+    return response.json();
+  },
+
+  async getBuildJob(jobId) {
+    const response = await fetch(`${API_BASE_URL}/builds/${jobId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch build job: ${jobId}`);
+    }
+    return response.json();
+  },
+
+  async getBuildJobStatus(jobId) {
+    const response = await fetch(`${API_BASE_URL}/builds/${jobId}/status`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch build job status: ${jobId}`);
+    }
+    return response.json();
+  },
+
+  async cancelBuildJob(jobId) {
+    const response = await fetch(`${API_BASE_URL}/builds/${jobId}/cancel`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to cancel build job: ${jobId}`);
+    }
+    return response.json();
   }
 };

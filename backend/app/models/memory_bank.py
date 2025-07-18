@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 
 class MemoryBankFile(BaseModel):
     name: str
@@ -55,3 +56,40 @@ class MemoryBankSummary(BaseModel):
     task_count: int
     last_updated: datetime
     has_changelog: bool
+
+class BuildJobStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class BuildJobType(str, Enum):
+    BUILD = "build"
+    UPDATE = "update"
+
+class BuildJob(BaseModel):
+    id: str
+    type: BuildJobType
+    status: BuildJobStatus
+    repo_path: str
+    memory_bank_name: Optional[str] = None
+    output_path: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    logs: List[str] = []
+    error_message: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
+
+class BuildJobRequest(BaseModel):
+    type: BuildJobType
+    repo_path: str
+    memory_bank_name: Optional[str] = None
+    output_name: Optional[str] = None
+
+class BuildJobResponse(BaseModel):
+    id: str
+    status: BuildJobStatus
+    created_at: datetime
+    message: str
