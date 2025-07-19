@@ -247,22 +247,61 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
                     # Handle AssistantMessage with content blocks
                     if isinstance(content, list):
                         for block in content:
-                            # Log text messages
+                            # Log text messages with more detail
                             if hasattr(block, 'text'):
                                 text = block.text
                                 if text.strip() and progress_callback:
-                                    preview = text[:100] + "..." if len(text) > 100 else text
+                                    # Capture full text for detailed analysis
+                                    lines = text.strip().split('\n')
+                                    
+                                    # Detect and log key decision points
+                                    for line in lines:
+                                        if any(keyword in line.lower() for keyword in ['analyzing', 'found', 'creating', 'updating', 'exploring', 'understanding']):
+                                            await progress_callback(f"[ANALYSIS] {line[:200]}")
+                                    
+                                    # Still provide general preview
+                                    preview = text[:150] + "..." if len(text) > 150 else text
                                     await progress_callback(f"Claude: {preview}")
                             
-                            # Track Write tool usage
+                            # Track tool usage with more detail
                             elif hasattr(block, 'name') and hasattr(block, 'input'):
-                                if block.name == "Write":
-                                    file_path = block.input.get('file_path', '')
+                                tool_name = block.name
+                                tool_input = block.input
+                                
+                                if tool_name == "Write":
+                                    file_path = tool_input.get('file_path', '')
                                     files_written.append(file_path)
                                     if progress_callback:
-                                        await progress_callback(f"Writing file: {file_path}")
-                                elif progress_callback:
-                                    await progress_callback(f"Using tool: {block.name}")
+                                        await progress_callback(f"[WRITE] Creating/updating file: {file_path}")
+                                        # Log first 100 chars of content being written
+                                        content_preview = tool_input.get('content', '')[:100]
+                                        if content_preview:
+                                            await progress_callback(f"[CONTENT] {content_preview}...")
+                                
+                                elif tool_name == "Read":
+                                    file_path = tool_input.get('file_path', '')
+                                    if progress_callback:
+                                        await progress_callback(f"[READ] Examining file: {file_path}")
+                                
+                                elif tool_name == "Grep":
+                                    pattern = tool_input.get('pattern', '')
+                                    path = tool_input.get('path', '.')
+                                    if progress_callback:
+                                        await progress_callback(f"[SEARCH] Searching for '{pattern}' in {path}")
+                                
+                                elif tool_name == "Glob":
+                                    pattern = tool_input.get('pattern', '')
+                                    if progress_callback:
+                                        await progress_callback(f"[GLOB] Finding files matching: {pattern}")
+                                
+                                elif tool_name == "LS":
+                                    path = tool_input.get('path', '.')
+                                    if progress_callback:
+                                        await progress_callback(f"[LS] Listing directory: {path}")
+                                
+                                else:
+                                    if progress_callback:
+                                        await progress_callback(f"[TOOL] Using {tool_name} with params: {str(tool_input)[:100]}")
             
             if progress_callback:
                 await progress_callback(f"Analysis complete. Files written: {len(files_written)}")
