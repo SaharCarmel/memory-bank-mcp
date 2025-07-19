@@ -79,6 +79,11 @@ class MemoryBankBuilder:
             
         if progress_callback:
             await progress_callback(f"Starting {mode} with Claude Code SDK...")
+            # Log the system prompt being used
+            await progress_callback(f"[SYSTEM_PROMPT] Using system prompt from: {self.system_prompt_path}")
+            await progress_callback(f"[SYSTEM_PROMPT_CONTENT] {system_prompt[:500]}..." if len(system_prompt) > 500 else f"[SYSTEM_PROMPT_CONTENT] {system_prompt}")
+            # Log the full prompt being sent to Claude
+            await progress_callback(f"[FULL_PROMPT] {prompt[:500]}..." if len(prompt) > 500 else f"[FULL_PROMPT] {prompt}")
             
         # Build the memory bank
         files_written = await self._execute_claude_build(

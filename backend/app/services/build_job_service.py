@@ -50,6 +50,15 @@ class BuildJobService:
         try:
             log_file_path = self._get_log_file_path(job)
             
+            # Extract system prompt and full prompt from logs if available
+            system_prompt = None
+            full_prompt = None
+            for log in job.logs:
+                if log.startswith("[SYSTEM_PROMPT_CONTENT]"):
+                    system_prompt = log.replace("[SYSTEM_PROMPT_CONTENT]", "").strip()
+                elif log.startswith("[FULL_PROMPT]"):
+                    full_prompt = log.replace("[FULL_PROMPT]", "").strip()
+            
             # Create log data with metadata
             log_data = {
                 "job_id": job.id,
@@ -62,6 +71,8 @@ class BuildJobService:
                 "started_at": job.started_at.isoformat() if job.started_at else None,
                 "completed_at": job.completed_at.isoformat() if job.completed_at else None,
                 "error_message": job.error_message,
+                "system_prompt": system_prompt,
+                "full_prompt": full_prompt,
                 "logs": job.logs,
                 "result": job.result
             }
@@ -88,6 +99,20 @@ class BuildJobService:
                 if job.error_message:
                     f.write(f"Error: {job.error_message}\n")
                 f.write(f"=" * 80 + "\n\n")
+                
+                # Write system prompt if available
+                if system_prompt:
+                    f.write("System Prompt:\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(system_prompt + "\n")
+                    f.write("-" * 80 + "\n\n")
+                
+                # Write full prompt if available
+                if full_prompt:
+                    f.write("Full Prompt (Task Instructions):\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(full_prompt + "\n")
+                    f.write("-" * 80 + "\n\n")
                 
                 # Write logs with timestamps
                 f.write("Log Entries:\n")
