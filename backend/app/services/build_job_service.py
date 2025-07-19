@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
+import logging
 
 from app.models.memory_bank import (
     BuildJob, 
@@ -12,6 +13,10 @@ from app.models.memory_bank import (
     BuildJobType,
     BuildJobRequest
 )
+from app.services.memory_bank_builder import MemoryBankBuilder
+from app.services.backward_compat import BackwardCompatibilityMode
+
+logger = logging.getLogger(__name__)
 
 
 class BuildJobService:
@@ -21,6 +26,7 @@ class BuildJobService:
         self.job_queue: asyncio.Queue = asyncio.Queue()
         self.worker_task: Optional[asyncio.Task] = None
         self.running = False
+        self.memory_bank_builder = MemoryBankBuilder(self.root_path)
     
     async def start_worker(self):
         """Start the background worker to process jobs"""
@@ -141,70 +147,76 @@ class BuildJobService:
             print(f"Job {job_id} failed: {e}")
     
     async def _execute_build_command(self, job: BuildJob):
-        """Execute the build memory bank command"""
-        build_script = self.root_path / "build_memory_bank.sh"
-        
-        if not build_script.exists():
-            raise FileNotFoundError("build_memory_bank.sh not found")
-        
-        # Prepare command
-        cmd = [
-            "bash",
-            str(build_script),
-            job.repo_path,
-            Path(job.output_path).name  # Just the output name, not full path
-        ]
-        
-        await self._run_command(job, cmd)
+        """Execute the build memory bank command using integrated builder"""
+        try:
+            # Check if backward compatibility mode is enabled
+            if BackwardCompatibilityMode.is_enabled():
+                job.logs.append("Using legacy bash script mode (USE_LEGACY_SCRIPTS=true)")
+                result = await BackwardCompatibilityMode.execute_legacy_build(
+                    root_path=self.root_path,
+                    repo_path=job.repo_path,
+                    output_name=Path(job.output_path).name,
+                    logs=job.logs
+                )
+            else:
+                # Create progress callback to update job logs
+                async def progress_callback(message: str):
+                    job.logs.append(message)
+                    logger.info(f"Build progress: {message}")
+                
+                # Use the integrated memory bank builder
+                result = await self.memory_bank_builder.build_memory_bank(
+                    repo_path=job.repo_path,
+                    output_name=Path(job.output_path).name,
+                    progress_callback=progress_callback
+                )
+            
+            # Store result in job
+            job.result = result
+            job.logs.append(f"Memory bank built successfully at: {result.get('output_path', job.output_path)}")
+            
+        except Exception as e:
+            logger.error(f"Build failed: {e}")
+            raise
     
     async def _execute_update_command(self, job: BuildJob):
-        """Execute the update memory bank command"""
-        update_script = self.root_path / "update_memory_bank.sh"
-        
-        if not update_script.exists():
-            raise FileNotFoundError("update_memory_bank.sh not found")
-        
+        """Execute the update memory bank command using integrated builder"""
         if not job.memory_bank_name:
             raise ValueError("Memory bank name is required for update operations")
         
-        # Prepare command
-        cmd = [
-            "bash",
-            str(update_script),
-            job.repo_path,
-            job.memory_bank_name
-        ]
-        
-        await self._run_command(job, cmd)
+        try:
+            # Check if backward compatibility mode is enabled
+            if BackwardCompatibilityMode.is_enabled():
+                job.logs.append("Using legacy bash script mode (USE_LEGACY_SCRIPTS=true)")
+                result = await BackwardCompatibilityMode.execute_legacy_update(
+                    root_path=self.root_path,
+                    repo_path=job.repo_path,
+                    memory_bank_name=job.memory_bank_name,
+                    logs=job.logs
+                )
+            else:
+                # Create progress callback to update job logs
+                async def progress_callback(message: str):
+                    job.logs.append(message)
+                    logger.info(f"Update progress: {message}")
+                
+                # Use the integrated memory bank builder for updates
+                result = await self.memory_bank_builder.update_memory_bank(
+                    repo_path=job.repo_path,
+                    memory_bank_name=job.memory_bank_name,
+                    progress_callback=progress_callback
+                )
+            
+            # Store result in job
+            job.result = result
+            job.logs.append(f"Memory bank updated successfully: {job.memory_bank_name}")
+            
+        except Exception as e:
+            logger.error(f"Update failed: {e}")
+            raise
     
-    async def _run_command(self, job: BuildJob, cmd: List[str]):
-        """Run a command and capture output"""
-        job.logs.append(f"Executing: {' '.join(cmd)}")
-        
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=str(self.root_path)
-        )
-        
-        # Read output line by line
-        async for line in process.stdout:
-            decoded_line = line.decode('utf-8').strip()
-            if decoded_line:
-                job.logs.append(decoded_line)
-        
-        # Wait for process to complete
-        return_code = await process.wait()
-        
-        if return_code != 0:
-            raise subprocess.CalledProcessError(
-                return_code, 
-                cmd, 
-                f"Command failed with return code {return_code}"
-            )
-        
-        job.logs.append("Command completed successfully")
+    # The _run_command method has been removed as we now use direct Python integration
+    # instead of subprocess calls to bash scripts
     
     def get_job(self, job_id: str) -> Optional[BuildJob]:
         """Get a job by ID"""

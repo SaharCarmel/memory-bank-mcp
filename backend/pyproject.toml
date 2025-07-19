@@ -8,6 +8,7 @@ dependencies = [
     "pydantic",
     "python-multipart",
     "python-markdown",
+    "claude-code-sdk>=0.0.14",
 ]
 
 [build-system]
