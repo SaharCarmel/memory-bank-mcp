@@ -9,10 +9,10 @@ class BuildMode(str, Enum):
 
 class BuildConfig(BaseModel):
     repo_path: str
-    output_name: Optional[str] = None
+    output_path: str
     mode: BuildMode = BuildMode.FULL
     system_prompt_path: Optional[str] = None
-    max_turns: int = 20
+    max_turns: int = 5000
 
 class BuildResult(BaseModel):
     success: bool

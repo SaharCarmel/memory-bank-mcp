@@ -54,12 +54,8 @@ class CoreMemoryBankBuilder:
         if not repo_path.is_dir():
             raise ValueError(f"Repository path is not a directory: {repo_path}")
             
-        # Determine output path
-        if config.output_name:
-            output_path = self.root_path / config.output_name
-        else:
-            folder_name = repo_path.name if repo_path.name else "repo"
-            output_path = self.root_path / f"{folder_name}_memory_bank"
+        # Use the explicit output path from config
+        output_path = Path(config.output_path).resolve()
             
         # Create output directories
         output_path.mkdir(parents=True, exist_ok=True)
@@ -71,7 +67,7 @@ class CoreMemoryBankBuilder:
         await self._call_progress_callback(progress_callback, "Directories created, loading system prompt...")
             
         # Load system prompt
-        system_prompt = self._load_system_prompt()
+        system_prompt = self._load_system_prompt(config.system_prompt_path)
         
         # Check for incremental update
         git_diff_file = repo_path / "git.diff"
@@ -129,13 +125,18 @@ class CoreMemoryBankBuilder:
                 errors=[str(e)]
             )
     
-    def _load_system_prompt(self) -> str:
+    def _load_system_prompt(self, custom_path: Optional[str] = None) -> str:
         """Load the system prompt for Claude Code"""
-        if not self.system_prompt_path.exists():
-            logger.warning(f"System prompt not found: {self.system_prompt_path}")
+        if custom_path:
+            prompt_path = Path(custom_path)
+        else:
+            prompt_path = self.system_prompt_path
+            
+        if not prompt_path.exists():
+            logger.warning(f"System prompt not found: {prompt_path}")
             return "Analyze this codebase and create a comprehensive memory bank."
             
-        with open(self.system_prompt_path, 'r') as f:
+        with open(prompt_path, 'r') as f:
             return f.read()
     
     def _create_incremental_prompt(self, system_prompt: str, git_diff_file: Path, memory_bank_dir: Path) -> str:

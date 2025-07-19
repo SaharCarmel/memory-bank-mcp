@@ -36,12 +36,20 @@ class MemoryBankBuilder:
         Returns:
             Dictionary with build results
         """
+        # Determine output path
+        if output_name:
+            output_path = self.root_path / output_name
+        else:
+            repo_name = Path(repo_path).name or "repo"
+            output_path = self.root_path / f"{repo_name}_memory_bank"
+            
         # Create build configuration
         config = BuildConfig(
             repo_path=repo_path,
-            output_name=output_name,
+            output_path=str(output_path),
             mode=BuildMode.FULL,
-            max_turns=20
+            system_prompt_path=str(self.root_path / "system_prompt.md"),
+            max_turns=5000
         )
         
         # Use the core builder
@@ -76,12 +84,16 @@ class MemoryBankBuilder:
         Returns:
             Dictionary with update results
         """
+        # Determine output path for existing memory bank
+        output_path = self.root_path / memory_bank_name
+        
         # Create build configuration for incremental update
         config = BuildConfig(
             repo_path=repo_path,
-            output_name=memory_bank_name,
+            output_path=str(output_path),
             mode=BuildMode.INCREMENTAL,
-            max_turns=15
+            system_prompt_path=str(self.root_path / "system_prompt.md"),
+            max_turns=5000
         )
         
         # Use the core builder
