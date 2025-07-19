@@ -15,7 +15,7 @@ sleep 3
 
 # Start the frontend
 echo "Starting React frontend..."
-cd "$SCRIPT_DIR/frontend" && PORT=3333 npm start &
+cd "$SCRIPT_DIR/frontend" && npm install && npm run dev -- --port 3333 &
 FRONTEND_PID=$!
 
 # Function to cleanup on script exit
