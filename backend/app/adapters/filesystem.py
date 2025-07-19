@@ -205,7 +205,7 @@ class FileSystemAdapter:
                 generated_at=datetime.fromisoformat(data['generated_at'].replace('Z', '+00:00')),
                 repo_path=data['repo_path'],
                 files_written=data['files_written'],
-                num_messages=data['num_messages'],
+                num_messages=data.get('num_messages', data.get('num_files', 0)),  # Handle both old and new formats
                 method=data['method']
             )
         except Exception as e:

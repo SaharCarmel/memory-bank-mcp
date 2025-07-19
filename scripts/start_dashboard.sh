@@ -8,7 +8,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Start the backend
 echo "Starting FastAPI backend..."
-cd "$PROJECT_ROOT/backend" && uv run uvicorn main:app --reload --port 8000 &
+cd "$PROJECT_ROOT/backend" && PYTHONPATH="$PROJECT_ROOT" uv run uvicorn main:app --reload --port 8888 &
 BACKEND_PID=$!
 
 # Wait for backend to start
@@ -16,7 +16,7 @@ sleep 3
 
 # Start the frontend
 echo "Starting React frontend..."
-cd "$PROJECT_ROOT/frontend" && npm run dev &
+cd "$PROJECT_ROOT/frontend" && npm run dev -- --port 3333 &
 FRONTEND_PID=$!
 
 # Function to cleanup on script exit
@@ -31,11 +31,11 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Dashboard started!"
-echo "Backend: http://localhost:8000"
-echo "Frontend: http://localhost:5174"
+echo "Backend: http://localhost:8888"
+echo "Frontend: http://localhost:3333"
 echo "Opening dashboard in browser..."
 sleep 2
-open http://localhost:5174 2>/dev/null || xdg-open http://localhost:5174 2>/dev/null || echo "Please open http://localhost:5174 in your browser"
+open http://localhost:3333 2>/dev/null || xdg-open http://localhost:3333 2>/dev/null || echo "Please open http://localhost:3333 in your browser"
 echo ""
 echo "Press Ctrl+C to stop both servers"
 
