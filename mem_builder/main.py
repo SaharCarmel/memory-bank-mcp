@@ -57,17 +57,16 @@ def main(repo, commit_hash):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 docs_folder_name = f"membank_docs_{timestamp}"
 
-            # Create docs directory inside the repo for processing
-            custom_docs_dir = os.path.join(project_dir, docs_folder_name)
-            
             # Memory bank will be created in sandbox user root, outside the repo
             sandbox_user_root = sandbox_manager.sandbox.get_user_root_dir()
             memory_bank_output_dir = os.path.join(sandbox_user_root, docs_folder_name)
 
             if commit_hash:
                 logger.info(f"Setting up docs environment for commit {commit_hash}")
+                # Create a minimal docs directory for namespace operations (if needed)
+                custom_docs_dir = os.path.join(sandbox_user_root, docs_folder_name, "docs")
                 repo_manager.setup_docs_environment(project_dir, commit_hash, repo, custom_docs_dir)
-                logger.info(f"Docs environment ready: {custom_docs_dir}")
+                logger.info(f"Git diff generated in repo root: {project_dir}/git.diff")
 
             # Run memory_bank_core CLI with appropriate arguments
             logger.info("Running memory_bank_core CLI...")

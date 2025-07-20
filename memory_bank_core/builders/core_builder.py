@@ -64,7 +64,7 @@ class CoreMemoryBankBuilder:
         tasks_dir = memory_bank_dir / "tasks"
         tasks_dir.mkdir(exist_ok=True)
         
-        await self._call_progress_callback(progress_callback, "Directories created, loading system prompt...")
+        await self._call_progress_callback(progress_callback, "Setting up directories and loading system prompt...")
             
         # Load system prompt
         system_prompt = self._load_system_prompt(config.system_prompt_path)
@@ -74,13 +74,15 @@ class CoreMemoryBankBuilder:
         is_incremental = git_diff_file.exists() or config.mode == BuildMode.INCREMENTAL
         
         if is_incremental and git_diff_file.exists():
+            await self._call_progress_callback(progress_callback, f"Found git diff - running incremental update")
             prompt = self._create_incremental_prompt(system_prompt, git_diff_file, memory_bank_dir)
             mode = "incremental_update"
         else:
+            await self._call_progress_callback(progress_callback, "Running full memory bank build")
             prompt = self._create_full_build_prompt(system_prompt, memory_bank_dir)
             mode = "full_build"
             
-        await self._call_progress_callback(progress_callback, f"Starting {mode} with Claude Code SDK...")
+        await self._call_progress_callback(progress_callback, f"Starting {mode}...")
             
         # Build the memory bank
         try:
@@ -133,11 +135,15 @@ class CoreMemoryBankBuilder:
             prompt_path = self.system_prompt_path
             
         if not prompt_path.exists():
-            logger.warning(f"System prompt not found: {prompt_path}")
+            logger.warning(f"System prompt not found: {prompt_path} - using fallback")
             return "Analyze this codebase and create a comprehensive memory bank."
             
-        with open(prompt_path, 'r') as f:
-            return f.read()
+        try:
+            with open(prompt_path, 'r') as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"Error reading system prompt: {e} - using fallback")
+            return "Analyze this codebase and create a comprehensive memory bank."
     
     def _create_incremental_prompt(self, system_prompt: str, git_diff_file: Path, memory_bank_dir: Path) -> str:
         """Create prompt for incremental update"""
@@ -208,6 +214,8 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
     ) -> List[str]:
         """Execute the Claude Code SDK build process"""
         
+        await self._call_progress_callback(progress_callback, "Initializing Claude Code SDK...")
+        
         # Configure Claude Code options
         options = ClaudeCodeOptions(
             max_turns=max_turns,
@@ -218,30 +226,52 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
         )
         
         files_written = []
+        message_count = 0
         
-        # Stream messages from Claude Code
-        async for message in query(prompt=prompt, options=options):
-            # Handle different message types
-            if hasattr(message, 'content'):
-                content = message.content
+        try:
+            # Stream messages from Claude Code
+            async for message in query(prompt=prompt, options=options):
+                message_count += 1
                 
-                # Handle AssistantMessage with content blocks
-                if isinstance(content, list):
-                    for block in content:
-                        # Log text messages
-                        if hasattr(block, 'text'):
-                            text = block.text
-                            if text.strip():
-                                await self._call_progress_callback(progress_callback, f"Claude: {text[:100]}..." if len(text) > 100 else f"Claude: {text}")
-                        
-                        # Track Write tool usage
-                        elif hasattr(block, 'name') and hasattr(block, 'input'):
-                            if block.name == "Write":
-                                file_path = block.input.get('file_path', '')
-                                await self._call_progress_callback(progress_callback, f"Writing file: {file_path}")
-                                files_written.append(file_path)
-                            else:
-                                await self._call_progress_callback(progress_callback, f"Using tool: {block.name}")
+                # Handle different message types
+                if hasattr(message, 'content'):
+                    content = message.content
+                    
+                    # Handle AssistantMessage with content blocks
+                    if isinstance(content, list):
+                        for block in content:
+                            # Log text messages
+                            if hasattr(block, 'text'):
+                                text = block.text
+                                if text.strip():
+                                    preview = text[:100] + "..." if len(text) > 100 else text
+                                    await self._call_progress_callback(progress_callback, f"Claude: {preview}")
+                            
+                            # Track tool usage
+                            elif hasattr(block, 'name') and hasattr(block, 'input'):
+                                tool_name = block.name
+                                tool_input = block.input
+                                
+                                if tool_name == "Write":
+                                    file_path = tool_input.get('file_path', 'unknown')
+                                    await self._call_progress_callback(progress_callback, f"Writing: {file_path}")
+                                    files_written.append(file_path)
+                                elif tool_name in ["Read", "Grep", "Glob", "LS"]:
+                                    await self._call_progress_callback(progress_callback, f"Using {tool_name}")
+                
+                # Handle error messages
+                elif hasattr(message, 'error'):
+                    error_msg = str(message.error)
+                    await self._call_progress_callback(progress_callback, f"ERROR: {error_msg}")
+                    logger.error(f"Claude Code SDK error: {error_msg}")
+            
+            await self._call_progress_callback(progress_callback, f"Completed! Created {len(files_written)} files")
+            
+        except Exception as e:
+            error_msg = f"Exception: {type(e).__name__}: {str(e)}"
+            await self._call_progress_callback(progress_callback, error_msg)
+            logger.error(error_msg)
+            raise e
         
         return files_written
 

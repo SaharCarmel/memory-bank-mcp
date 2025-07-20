@@ -147,6 +147,23 @@ claude-code-sdk
             self.sandbox.process.exec(f"cd {user_root}/memory_bank_core && pip install -e .")
             self.logger.info("memory_bank_core dependencies installed")
             
+            # Copy system_prompt.md to user root
+            current_dir = os.path.dirname(os.path.dirname(__file__))  # Go up two levels from lib/
+            system_prompt_path = os.path.join(current_dir, "..", "system_prompt.md")
+            system_prompt_path = os.path.abspath(system_prompt_path)
+            
+            if os.path.exists(system_prompt_path):
+                with open(system_prompt_path, 'r') as f:
+                    system_prompt_content = f.read()
+                
+                self.sandbox.fs.upload_file(
+                    system_prompt_content.encode('utf-8'),
+                    f"{user_root}/system_prompt.md"
+                )
+                self.logger.info("system_prompt.md copied to sandbox")
+            else:
+                self.logger.warning(f"system_prompt.md not found at {system_prompt_path}")
+            
             # Clean up temp file
             os.unlink(temp_tar.name)
     
@@ -351,5 +368,5 @@ claude-code-sdk
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit with cleanup."""
-        self.cleanup(force_delete=True)
+        self.cleanup(force_delete=False)
         return False  # Don't suppress exceptions

@@ -220,12 +220,13 @@ class JobManager:
                     raise RuntimeError("Memory bank builder not available. Either enable legacy mode or install claude_code_sdk.")
                 
                 # Create build configuration
+                system_prompt_path = str(self.root_path / "system_prompt.md")
                 config = BuildConfig(
                     repo_path=job.repo_path,
                     output_path=job.output_path,
                     mode=BuildMode.FULL,
-                    system_prompt_path=str(self.root_path / "system_prompt.md"),
-                    max_turns=5000
+                    system_prompt_path=system_prompt_path,
+                    max_turns=500  # Reasonable limit for memory bank generation
                 )
                 
                 # Use the memory bank builder
