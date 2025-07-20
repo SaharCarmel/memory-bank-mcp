@@ -232,7 +232,9 @@ class JobManager:
                     output_path=job.output_path,
                     mode=BuildMode.FULL,
                     system_prompt_path=system_prompt_path,
-                    max_turns=1000  # Reasonable limit for memory bank generation
+                    max_turns=1000,  # Reasonable limit for memory bank generation
+                    auto_restart_on_early_termination=False,  # Temporarily disable to test
+                    max_restart_attempts=1  # Reduce to 1 for testing
                 )
                 
                 # Use the memory bank builder
@@ -304,7 +306,9 @@ class JobManager:
                     output_path=str(output_path),
                     mode=BuildMode.INCREMENTAL,
                     system_prompt_path=str(self.root_path / "system_prompt.md"),
-                    max_turns=5000
+                    max_turns=5000,
+                    auto_restart_on_early_termination=False,  # Temporarily disable to test
+                    max_restart_attempts=1  # Reduce to 1 for testing
                 )
                 
                 # Use the memory bank builder for updates

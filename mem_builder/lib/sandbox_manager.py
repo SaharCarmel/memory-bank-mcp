@@ -248,7 +248,7 @@ claude-code-sdk
             return self._run_with_streaming(command)
         else:
             # Fallback to original method
-            result = self.sandbox.process.exec(command)
+            result = self.sandbox.process.exec(command, timeout=900) # 15 minutes
             output = getattr(result, 'stdout', getattr(result, 'result', str(result)))
             self.logger.info(f"memory_bank_core execution output: {output}")
             return output
@@ -269,7 +269,8 @@ claude-code-sdk
             # Execute command asynchronously
             cmd_result = self.sandbox.process.execute_session_command(
                 session_id, 
-                {"command": command, "async": True}
+                {"command": command, "async": True},
+                timeout=900 # 15 minutes
             )
             
             if hasattr(cmd_result, 'cmd_id'):
@@ -322,12 +323,31 @@ claude-code-sdk
                                         # Use different prefixes for different types of output
                                         if '[BUILD_PROGRESS]' in line or '[UPDATE_PROGRESS]' in line:
                                             self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif '[TURN' in line:  # Capture our new turn-based logging
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif '[ATTEMPT' in line:  # Capture restart attempt logs
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif '[TERMINATION]' in line:  # Capture termination analysis
+                                            self.logger.warning(f"[STREAM] {line.strip()}")
+                                        elif '[WARNING]' in line:  # Capture warnings about limits
+                                            self.logger.warning(f"[STREAM] {line.strip()}")
+                                        elif '[RESTART]' in line:  # Capture restart messages
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif '[SUCCESS]' in line:  # Capture success messages
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif '[DEBUG]' in line:  # Capture debug information
+                                            self.logger.info(f"[STREAM] {line.strip()}")
                                         elif 'LEGACY_' in line:
                                             self.logger.info(f"[STREAM] {line.strip()}")
                                         elif 'ERROR:' in line or 'Exception:' in line:
                                             self.logger.error(f"[STREAM] {line.strip()}")
-                                        else:
+                                        elif '✅' in line or '❌' in line or '🚀' in line or '📁' in line:  # Capture emoji status messages
                                             self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif line.strip().startswith('Claude:') or 'Creating file:' in line or 'Reading:' in line:
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        else:
+                                            # Still log other lines but with less priority
+                                            self.logger.debug(f"[STREAM] {line.strip()}")
                                 
                                 last_output_length = current_length
                                 consecutive_empty_polls = 0
