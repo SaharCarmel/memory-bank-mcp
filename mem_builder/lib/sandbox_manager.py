@@ -108,6 +108,219 @@ claude-code-sdk
             except Exception as e2:
                 self.logger.error(f"Both verification methods failed: {e2}")
     
+    def copy_memory_bank_core(self):
+        """Copy memory_bank_core directory to sandbox."""
+        if not self.sandbox:
+            raise RuntimeError("Sandbox not created yet")
+        
+        import os
+        import tarfile
+        import tempfile
+        
+        # Get the memory_bank_core path relative to this file
+        current_dir = os.path.dirname(os.path.dirname(__file__))  # Go up two levels from lib/
+        memory_bank_core_path = os.path.join(current_dir, "..", "memory_bank_core")
+        memory_bank_core_path = os.path.abspath(memory_bank_core_path)
+        
+        if not os.path.exists(memory_bank_core_path):
+            raise FileNotFoundError(f"memory_bank_core directory not found at {memory_bank_core_path}")
+        
+        # Create a tar archive of memory_bank_core
+        with tempfile.NamedTemporaryFile(suffix='.tar.gz', delete=False) as temp_tar:
+            with tarfile.open(temp_tar.name, 'w:gz') as tar:
+                tar.add(memory_bank_core_path, arcname='memory_bank_core')
+            
+            # Upload and extract to sandbox
+            user_root = self.sandbox.get_user_root_dir()
+            target_path = f"{user_root}/memory_bank_core.tar.gz"
+            
+            with open(temp_tar.name, 'rb') as f:
+                self.sandbox.fs.upload_file(f.read(), target_path)
+            
+            # Extract the archive
+            self.sandbox.process.exec(f"cd {user_root} && tar -xzf memory_bank_core.tar.gz")
+            self.sandbox.process.exec(f"rm {user_root}/memory_bank_core.tar.gz")
+            
+            self.logger.info(f"memory_bank_core copied to {user_root}/memory_bank_core")
+            
+            # Install memory_bank_core dependencies
+            self.sandbox.process.exec(f"cd {user_root}/memory_bank_core && pip install -e .")
+            self.logger.info("memory_bank_core dependencies installed")
+            
+            # Clean up temp file
+            os.unlink(temp_tar.name)
+    
+    def run_memory_bank_core(self, project_dir, memory_bank_output_dir, docs_folder_name, stream_output=True):
+        """Run memory_bank_core CLI with appropriate build/update command in the sandbox."""
+        if not self.sandbox:
+            raise RuntimeError("Sandbox not created yet")
+        
+        user_root = self.sandbox.get_user_root_dir()
+        memory_bank_core_path = f"{user_root}/memory_bank_core"
+        
+        # Use the docs_folder_name as the memory bank name
+        memory_bank_name = docs_folder_name
+        self.logger.info(f"Using memory bank name: {memory_bank_name}")
+        
+        # Check if memory bank already exists to decide between build/update
+        # Memory bank directory structure: {memory_bank_name}/memory-bank/
+        existing_memory_bank_path = f"{user_root}/{memory_bank_name}"
+        memory_bank_exists = False
+        
+        # Use more robust check: directory must exist AND be readable
+        # Also check for memory-bank subdirectory to ensure it's a valid memory bank
+        robust_check_cmd = f"[ -d '{existing_memory_bank_path}' ] && [ -r '{existing_memory_bank_path}' ] && ls '{existing_memory_bank_path}' >/dev/null 2>&1 && echo 'exists' || echo 'not_exists'"
+        result = self.sandbox.process.exec(robust_check_cmd)
+        output = getattr(result, 'stdout', getattr(result, 'result', str(result)))
+        memory_bank_exists = 'exists' in output.lower()
+        
+        # Additional check: if directory exists, verify it has memory bank content
+        if memory_bank_exists:
+            # Check if it looks like a proper memory bank (has memory-bank subdirectory or md files)
+            content_check_cmd = f"[ -d '{existing_memory_bank_path}/memory-bank' ] || [ -f '{existing_memory_bank_path}'/*.md ] 2>/dev/null && echo 'valid_membank' || echo 'empty_dir'"
+            content_result = self.sandbox.process.exec(content_check_cmd)
+            content_output = getattr(content_result, 'stdout', getattr(content_result, 'result', str(content_result)))
+            
+            if 'empty_dir' in content_output.lower():
+                self.logger.info(f"Directory exists but appears empty, treating as new build")
+                memory_bank_exists = False
+            else:
+                # Debug: list what's actually in the directory
+                debug_cmd = f"ls -la '{existing_memory_bank_path}/' 2>/dev/null | head -10"
+                debug_result = self.sandbox.process.exec(debug_cmd)
+                debug_output = getattr(debug_result, 'stdout', getattr(debug_result, 'result', str(debug_result)))
+                self.logger.info(f"Directory contents: {debug_output.strip()}")
+        
+        self.logger.info(f"Memory bank exists check: {memory_bank_exists} at {existing_memory_bank_path}")
+        
+        # Build the appropriate command
+        # Set PYTHONPATH to include the parent directory so memory_bank_core can be imported
+        # Note: --root-path and --verbose are group-level options and must come before the subcommand
+        pythonpath_cmd = f"cd {user_root} && PYTHONPATH='{user_root}' python -m memory_bank_core.main --root-path '{user_root}' --verbose"
+        
+        if memory_bank_exists:
+            # Update existing memory bank
+            command = f"{pythonpath_cmd} update '{project_dir}' '{memory_bank_name}'"
+            self.logger.info(f"Running UPDATE command for existing memory bank: {memory_bank_name}")
+        else:
+            # Build new memory bank
+            command = f"{pythonpath_cmd} build '{project_dir}' --output-name '{memory_bank_name}'"
+            self.logger.info(f"Running BUILD command for new memory bank: {memory_bank_name}")
+        
+        self.logger.info(f"Executing command: {command}")
+        
+        if stream_output:
+            return self._run_with_streaming(command)
+        else:
+            # Fallback to original method
+            result = self.sandbox.process.exec(command)
+            output = getattr(result, 'stdout', getattr(result, 'result', str(result)))
+            self.logger.info(f"memory_bank_core execution output: {output}")
+            return output
+    
+    def _run_with_streaming(self, command):
+        """Run command with real-time stdout streaming."""
+        import uuid
+        import time
+        
+        # Generate unique session ID
+        session_id = f"membank-session-{uuid.uuid4().hex[:8]}"
+        
+        try:
+            # Create session
+            self.sandbox.process.create_session(session_id)
+            self.logger.info(f"Created streaming session: {session_id}")
+            
+            # Execute command asynchronously
+            cmd_result = self.sandbox.process.execute_session_command(
+                session_id, 
+                {"command": command, "async": True}
+            )
+            
+            if hasattr(cmd_result, 'cmd_id'):
+                cmd_id = cmd_result.cmd_id
+            else:
+                cmd_id = getattr(cmd_result, 'cmdId', None)
+            
+            if not cmd_id:
+                self.logger.error("Failed to get command ID for streaming")
+                raise RuntimeError("Could not obtain command ID for streaming")
+            
+            self.logger.info(f"Started memory_bank_core execution with streaming (cmd_id: {cmd_id})")
+            
+            # Stream logs by polling
+            full_output = []
+            
+            # Poll for logs in a loop
+            import time
+            max_retries = 300  # 5 minutes with 1-second intervals
+            retries = 0
+            
+            while retries < max_retries:
+                try:
+                    # Get current logs
+                    logs_result = self.sandbox.process.get_session_command_logs(session_id, cmd_id)
+                    
+                    if logs_result:
+                        # Handle different response formats
+                        if hasattr(logs_result, 'logs'):
+                            log_content = logs_result.logs
+                        elif hasattr(logs_result, 'stdout'):
+                            log_content = logs_result.stdout
+                        else:
+                            log_content = str(logs_result)
+                        
+                        if log_content and log_content not in full_output:
+                            # Clean and log new content
+                            clean_content = log_content.replace('\x00', '')
+                            if clean_content.strip():
+                                # Only log new content
+                                previous_content = ''.join(full_output)
+                                if clean_content != previous_content:
+                                    new_content = clean_content[len(previous_content):]
+                                    if new_content.strip():
+                                        self.logger.info(f"[STREAM] {new_content.rstrip()}")
+                                
+                            full_output = [clean_content]
+                    
+                    # Check if command is still running
+                    try:
+                        cmd_status = self.sandbox.process.get_session_command_status(session_id, cmd_id)
+                        if hasattr(cmd_status, 'finished') and cmd_status.finished:
+                            break
+                        elif hasattr(cmd_status, 'status') and cmd_status.status in ['completed', 'failed', 'finished']:
+                            break
+                    except Exception:
+                        # If we can't get status, continue polling for a bit more
+                        pass
+                    
+                    time.sleep(1)
+                    retries += 1
+                    
+                except Exception as log_error:
+                    self.logger.warning(f"Error polling logs: {log_error}")
+                    time.sleep(1)
+                    retries += 1
+            
+            return ''.join(full_output)
+            
+        except Exception as e:
+            self.logger.error(f"Error during streaming execution: {e}")
+            # Fallback to non-streaming execution
+            self.logger.info("Falling back to non-streaming execution")
+            result = self.sandbox.process.exec(command)
+            output = getattr(result, 'stdout', getattr(result, 'result', str(result)))
+            self.logger.info(f"memory_bank_core execution output: {output}")
+            return output
+        
+        finally:
+            # Clean up session if it was created
+            try:
+                self.sandbox.process.delete_session(session_id)
+                self.logger.info(f"Cleaned up session: {session_id}")
+            except Exception as e:
+                self.logger.warning(f"Failed to clean up session {session_id}: {e}")
+    
     def cleanup(self, force_delete=False):
         """Clean up sandbox resources."""
         if self.sandbox:

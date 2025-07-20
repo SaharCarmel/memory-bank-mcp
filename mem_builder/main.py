@@ -43,29 +43,46 @@ def main(repo, commit_hash):
             # Install tools
             sandbox_manager.install_tools()
 
+            # Copy memory_bank_core to sandbox
+            logger.info("Copying memory_bank_core to sandbox...")
+            sandbox_manager.copy_memory_bank_core()
+            logger.info("memory_bank_core copied successfully")
+
             # Set up docs environment if commit provided
             
             # Use provided name, environment variable, or generate timestamp-based name
-            custom_docs_dir = os.getenv("MEMBANK_DOCS_FOLDER")
-            if not custom_docs_dir:
+            docs_folder_name = os.getenv("MEMBANK_DOCS_FOLDER")
+            if not docs_folder_name:
                 # Fallback to timestamp-based name
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                custom_docs_dir = f"membank_docs_{timestamp}"
+                docs_folder_name = f"membank_docs_{timestamp}"
 
-            custom_docs_dir = os.path.join(project_dir, custom_docs_dir)
+            # Create docs directory inside the repo for processing
+            custom_docs_dir = os.path.join(project_dir, docs_folder_name)
+            
+            # Memory bank will be created in sandbox user root, outside the repo
+            sandbox_user_root = sandbox_manager.sandbox.get_user_root_dir()
+            memory_bank_output_dir = os.path.join(sandbox_user_root, docs_folder_name)
 
             if commit_hash:
                 logger.info(f"Setting up docs environment for commit {commit_hash}")
                 repo_manager.setup_docs_environment(project_dir, commit_hash, repo, custom_docs_dir)
                 logger.info(f"Docs environment ready: {custom_docs_dir}")
 
-            # TODO: Add Sahar mem builder to sandbox
-            # TODO: make sure to use env vars
+            # Run memory_bank_core CLI with appropriate arguments
+            logger.info("Running memory_bank_core CLI...")
+            logger.info(f"Memory bank will be created at: {memory_bank_output_dir}")
+            memory_bank_output = sandbox_manager.run_memory_bank_core(
+                project_dir=project_dir,
+                memory_bank_output_dir=memory_bank_output_dir,
+                docs_folder_name=docs_folder_name
+            )
+            logger.info("memory_bank_core execution completed")
 
-            # Download files (only the custom docs directory)
-            logger.info("Downloading custom docs directory...")
+            # Download files (memory bank output directory)
+            logger.info("Downloading memory bank directory...")
             local_docs_upload_dir = download_manager.download_all_files(
-                repo, project_dir, custom_docs_dir
+                repo, memory_bank_output_dir, memory_bank_output_dir
             )
             
             logger.info(f"Files organized and ready for upload from: {local_docs_upload_dir}")

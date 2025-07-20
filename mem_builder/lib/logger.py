@@ -50,4 +50,7 @@ def get_logger(name: str = "membank") -> logging.Logger:
     Returns:
         Logger instance
     """
-    return logging.getLogger(name) or setup_logger(name)
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        return setup_logger(name)
+    return logger
