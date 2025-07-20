@@ -32,9 +32,9 @@ class ClaudeIntegrationService:
         prompt: str,
         repo_path: Path,
         system_prompt: Optional[str] = None,
-        max_turns: int = 20,
+        max_turns: int = 200,
         allowed_tools: Optional[List[str]] = None,
-        permission_mode: str = "acceptEdits"
+        permission_mode: str = "bypassPermissions"
     ) -> AsyncGenerator[Message, None]:
         """
         Analyze a repository using Claude Code SDK

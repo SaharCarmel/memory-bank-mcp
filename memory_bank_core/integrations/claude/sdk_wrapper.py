@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ClaudeCodeSDKWrapper(ClaudeIntegration):
     """Wrapper for Claude Code SDK"""
     
-    def __init__(self, max_turns: int = 20):
+    def __init__(self, max_turns: int = 1000):
         self.max_turns = max_turns
         self._sdk_available = self._check_sdk_availability()
     
@@ -51,7 +51,7 @@ class ClaudeCodeSDKWrapper(ClaudeIntegration):
             system_prompt=system_prompt,
             cwd=str(repo_path),
             allowed_tools=self.get_allowed_tools(),
-            permission_mode="acceptEdits"
+            permission_mode="bypassPermissions"
         )
         
         messages: List[Message] = []
@@ -147,6 +147,6 @@ class ClaudeCodeSDKWrapper(ClaudeIntegration):
         options = {
             "max_turns": kwargs.get("max_turns", self.max_turns),
             "allowed_tools": kwargs.get("allowed_tools", self.get_allowed_tools()),
-            "permission_mode": kwargs.get("permission_mode", "acceptEdits")
+            "permission_mode": kwargs.get("permission_mode", "bypassPermissions")
         }
         return options

@@ -210,7 +210,7 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
         system_prompt: str,
         repo_path: Path,
         progress_callback: Optional[Callable[[str], None]] = None,
-        max_turns: int = 20
+        max_turns: int = 1000
     ) -> List[str]:
         """Execute the Claude Code SDK build process"""
         
@@ -222,7 +222,7 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
             system_prompt=system_prompt,
             cwd=str(repo_path),
             allowed_tools=["Read", "Grep", "Glob", "LS", "Write"],
-            permission_mode="acceptEdits"
+            permission_mode="bypassPermissions"
         )
         
         files_written = []

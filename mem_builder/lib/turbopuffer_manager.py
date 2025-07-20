@@ -368,7 +368,7 @@ class TurbopufferManager:
             results = ns.query(
                 top_k=top_k,
                 filters=("repo", "Eq", repo_name),
-                rank_by=('text', 'BM25', query_text),
+                rank_by=('content', 'BM25', query_text),
                 include_attributes=["file_name", "file_path", "file_extension", "content"],
             )
             
