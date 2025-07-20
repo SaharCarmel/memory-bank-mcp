@@ -179,6 +179,13 @@ claude-code-sdk
         memory_bank_name = docs_folder_name
         self.logger.info(f"Using memory bank name: {memory_bank_name}")
         
+        # Validate project directory exists in sandbox
+        project_exists_cmd = f"[ -d '{project_dir}' ] && echo 'exists' || echo 'not_exists'"
+        result = self.sandbox.process.exec(project_exists_cmd)
+        output = getattr(result, 'stdout', getattr(result, 'result', str(result)))
+        if 'not_exists' in output.lower():
+            raise RuntimeError(f"Project directory does not exist in sandbox: {project_dir}")
+        
         # Check if memory bank already exists to decide between build/update
         # Memory bank directory structure: {memory_bank_name}/memory-bank/
         existing_memory_bank_path = f"{user_root}/{memory_bank_name}"
@@ -210,10 +217,18 @@ claude-code-sdk
         
         self.logger.info(f"Memory bank exists check: {memory_bank_exists} at {existing_memory_bank_path}")
         
+        # Set the root path to the specified output directory if provided, otherwise use user_root
+        if memory_bank_output_dir:
+            # Ensure the output directory exists
+            self.sandbox.process.exec(f"mkdir -p '{memory_bank_output_dir}'")
+            root_path = memory_bank_output_dir
+        else:
+            root_path = user_root
+        
         # Build the appropriate command
         # Set PYTHONPATH to include the parent directory so memory_bank_core can be imported
         # Note: --root-path and --verbose are group-level options and must come before the subcommand
-        pythonpath_cmd = f"cd {user_root} && PYTHONPATH='{user_root}' python -m memory_bank_core.main --root-path '{user_root}' --verbose"
+        pythonpath_cmd = f"cd {user_root} && PYTHONPATH='{user_root}' python -m memory_bank_core.main --root-path '{root_path}' --verbose"
         
         if memory_bank_exists:
             # Update existing memory bank
@@ -225,6 +240,9 @@ claude-code-sdk
             self.logger.info(f"Running BUILD command for new memory bank: {memory_bank_name}")
         
         self.logger.info(f"Executing command: {command}")
+        self.logger.info(f"Root path: {root_path}")
+        self.logger.info(f"Project directory: {project_dir}")
+        self.logger.info(f"Memory bank name: {memory_bank_name}")
         
         if stream_output:
             return self._run_with_streaming(command)
@@ -268,10 +286,12 @@ claude-code-sdk
             # Stream logs by polling
             full_output = []
             
-            # Poll for logs in a loop
+            # Poll for logs in a loop with improved streaming
             import time
-            max_retries = 300  # 5 minutes with 1-second intervals
+            max_retries = 600  # 10 minutes with 1-second intervals
             retries = 0
+            last_output_length = 0
+            consecutive_empty_polls = 0
             
             while retries < max_retries:
                 try:
@@ -287,36 +307,68 @@ claude-code-sdk
                         else:
                             log_content = str(logs_result)
                         
-                        if log_content and log_content not in full_output:
-                            # Clean and log new content
-                            clean_content = log_content.replace('\x00', '')
-                            if clean_content.strip():
-                                # Only log new content
-                                previous_content = ''.join(full_output)
-                                if clean_content != previous_content:
-                                    new_content = clean_content[len(previous_content):]
-                                    if new_content.strip():
-                                        self.logger.info(f"[STREAM] {new_content.rstrip()}")
+                        if log_content:
+                            # Clean and process new content
+                            clean_content = log_content.replace('\x00', '').replace('\r', '')
+                            current_length = len(clean_content)
+                            
+                            # If we have new content since last poll
+                            if current_length > last_output_length:
+                                new_content = clean_content[last_output_length:]
                                 
-                            full_output = [clean_content]
+                                # Log each line separately for better streaming visibility
+                                for line in new_content.split('\n'):
+                                    if line.strip():
+                                        # Use different prefixes for different types of output
+                                        if '[BUILD_PROGRESS]' in line or '[UPDATE_PROGRESS]' in line:
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif 'LEGACY_' in line:
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                        elif 'ERROR:' in line or 'Exception:' in line:
+                                            self.logger.error(f"[STREAM] {line.strip()}")
+                                        else:
+                                            self.logger.info(f"[STREAM] {line.strip()}")
+                                
+                                last_output_length = current_length
+                                consecutive_empty_polls = 0
+                                full_output = [clean_content]
+                            else:
+                                consecutive_empty_polls += 1
+                        else:
+                            consecutive_empty_polls += 1
+                    else:
+                        consecutive_empty_polls += 1
                     
                     # Check if command is still running
                     try:
                         cmd_status = self.sandbox.process.get_session_command_status(session_id, cmd_id)
                         if hasattr(cmd_status, 'finished') and cmd_status.finished:
+                            self.logger.info("[STREAM] Command execution finished")
                             break
                         elif hasattr(cmd_status, 'status') and cmd_status.status in ['completed', 'failed', 'finished']:
+                            self.logger.info(f"[STREAM] Command status: {cmd_status.status}")
                             break
                     except Exception:
                         # If we can't get status, continue polling for a bit more
                         pass
                     
-                    time.sleep(1)
+                    # Adaptive polling: faster when getting output, slower when idle
+                    if consecutive_empty_polls < 5:
+                        time.sleep(0.5)  # Fast polling when active
+                    elif consecutive_empty_polls < 30:
+                        time.sleep(1)    # Normal polling
+                    else:
+                        time.sleep(2)    # Slow polling when idle
+                    
                     retries += 1
                     
+                    # Log progress every minute for long-running operations
+                    if retries % 60 == 0:
+                        self.logger.info(f"[STREAM] Still running... ({retries//60} minutes elapsed)")
+                    
                 except Exception as log_error:
-                    self.logger.warning(f"Error polling logs: {log_error}")
-                    time.sleep(1)
+                    self.logger.warning(f"Error polling logs (attempt {retries}): {log_error}")
+                    time.sleep(2)
                     retries += 1
             
             return ''.join(full_output)

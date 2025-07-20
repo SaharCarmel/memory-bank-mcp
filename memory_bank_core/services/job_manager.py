@@ -198,8 +198,14 @@ class JobManager:
                 job.logs.append(message)
                 logger.info(f"Build progress: {message}")
                 
-                # Also print to stdout for real-time streaming capture
-                print(f"[PROGRESS] {message}", flush=True)
+                # Write to stdout immediately with explicit flushing for streaming capture
+                import sys
+                sys.stdout.write(f"[BUILD_PROGRESS] {message}\n")
+                sys.stdout.flush()
+                
+                # Also write to stderr as backup for streaming systems that monitor both
+                sys.stderr.write(f"[BUILD_PROGRESS] {message}\n")
+                sys.stderr.flush()
                 
                 # Save logs periodically (every 10 log entries)
                 log_save_counter[0] += 1
@@ -226,7 +232,7 @@ class JobManager:
                     output_path=job.output_path,
                     mode=BuildMode.FULL,
                     system_prompt_path=system_prompt_path,
-                    max_turns=500  # Reasonable limit for memory bank generation
+                    max_turns=1000  # Reasonable limit for memory bank generation
                 )
                 
                 # Use the memory bank builder
@@ -265,8 +271,14 @@ class JobManager:
                 job.logs.append(message)
                 logger.info(f"Update progress: {message}")
                 
-                # Also print to stdout for real-time streaming capture
-                print(f"[PROGRESS] {message}", flush=True)
+                # Write to stdout immediately with explicit flushing for streaming capture
+                import sys
+                sys.stdout.write(f"[UPDATE_PROGRESS] {message}\n")
+                sys.stdout.flush()
+                
+                # Also write to stderr as backup for streaming systems that monitor both
+                sys.stderr.write(f"[UPDATE_PROGRESS] {message}\n")
+                sys.stderr.flush()
                 
                 # Save logs periodically (every 10 log entries)
                 log_save_counter[0] += 1

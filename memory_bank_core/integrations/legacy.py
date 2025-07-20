@@ -79,12 +79,12 @@ class LegacyScriptExecutor:
         if process.stdout and progress_callback:
             for line in process.stdout.strip().split('\n'):
                 if line.strip():
-                    await self._call_progress_callback(progress_callback, line)
+                    await self._call_progress_callback(progress_callback, f"LEGACY_BUILD: {line}")
         
         if process.stderr and progress_callback:
             for line in process.stderr.strip().split('\n'):
                 if line.strip():
-                    await self._call_progress_callback(progress_callback, f"STDERR: {line}")
+                    await self._call_progress_callback(progress_callback, f"LEGACY_BUILD_ERR: {line}")
         
         if process.returncode != 0:
             raise subprocess.CalledProcessError(
@@ -149,12 +149,12 @@ class LegacyScriptExecutor:
         if process.stdout and progress_callback:
             for line in process.stdout.strip().split('\n'):
                 if line.strip():
-                    await self._call_progress_callback(progress_callback, line)
+                    await self._call_progress_callback(progress_callback, f"LEGACY_UPDATE: {line}")
         
         if process.stderr and progress_callback:
             for line in process.stderr.strip().split('\n'):
                 if line.strip():
-                    await self._call_progress_callback(progress_callback, f"STDERR: {line}")
+                    await self._call_progress_callback(progress_callback, f"LEGACY_UPDATE_ERR: {line}")
         
         if process.returncode != 0:
             raise subprocess.CalledProcessError(

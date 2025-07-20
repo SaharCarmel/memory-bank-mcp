@@ -221,9 +221,12 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
             max_turns=max_turns,
             system_prompt=system_prompt,
             cwd=str(repo_path),
-            allowed_tools=["Read", "Grep", "Glob", "LS", "Write"],
+            allowed_tools=["Read", "Grep", "Glob", "LS", "Write", "Bash", "Edit", "MultiEdit", "Task", "TodoWrite"],
             permission_mode="bypassPermissions"
         )
+        
+        await self._call_progress_callback(progress_callback, f"Starting memory bank generation with max {max_turns} turns...")
+        await self._call_progress_callback(progress_callback, f"Working directory: {repo_path}")
         
         files_written = []
         message_count = 0
@@ -232,6 +235,10 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
             # Stream messages from Claude Code
             async for message in query(prompt=prompt, options=options):
                 message_count += 1
+                
+                # Progress update every 5 messages
+                if message_count % 5 == 0:
+                    await self._call_progress_callback(progress_callback, f"Processing message {message_count}...")
                 
                 # Handle different message types
                 if hasattr(message, 'content'):
@@ -254,10 +261,19 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
                                 
                                 if tool_name == "Write":
                                     file_path = tool_input.get('file_path', 'unknown')
-                                    await self._call_progress_callback(progress_callback, f"Writing: {file_path}")
+                                    await self._call_progress_callback(progress_callback, f"Creating file: {file_path}")
                                     files_written.append(file_path)
-                                elif tool_name in ["Read", "Grep", "Glob", "LS"]:
-                                    await self._call_progress_callback(progress_callback, f"Using {tool_name}")
+                                elif tool_name == "Read":
+                                    file_path = tool_input.get('file_path', 'unknown')
+                                    await self._call_progress_callback(progress_callback, f"Reading: {file_path}")
+                                elif tool_name in ["Grep", "Glob"]:
+                                    pattern = tool_input.get('pattern', 'unknown')
+                                    await self._call_progress_callback(progress_callback, f"{tool_name} search: {pattern}")
+                                elif tool_name == "LS":
+                                    path = tool_input.get('path', 'current directory')
+                                    await self._call_progress_callback(progress_callback, f"Listing: {path}")
+                                else:
+                                    await self._call_progress_callback(progress_callback, f"Using tool: {tool_name}")
                 
                 # Handle error messages
                 elif hasattr(message, 'error'):
@@ -265,7 +281,7 @@ Analyze the codebase thoroughly before writing. Each file should contain compreh
                     await self._call_progress_callback(progress_callback, f"ERROR: {error_msg}")
                     logger.error(f"Claude Code SDK error: {error_msg}")
             
-            await self._call_progress_callback(progress_callback, f"Completed! Created {len(files_written)} files")
+            await self._call_progress_callback(progress_callback, f"Memory bank generation completed! Created {len(files_written)} files in total")
             
         except Exception as e:
             error_msg = f"Exception: {type(e).__name__}: {str(e)}"

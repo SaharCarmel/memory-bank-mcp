@@ -12,7 +12,7 @@ class BuildConfig(BaseModel):
     output_path: str
     mode: BuildMode = BuildMode.FULL
     system_prompt_path: Optional[str] = None
-    max_turns: int = 5000
+    max_turns: int = 1000
 
 class BuildResult(BaseModel):
     success: bool
