@@ -19,6 +19,8 @@ from ..agents.architecture_agent import ArchitectureAgent, ArchitectureManifest
 from ..agents.orchestration_agent import OrchestrationAgent, OrchestrationResult
 from ..agents.validation_orchestrator import ValidationOrchestrator, ValidationOrchestrationResult
 from ..exceptions.build import BuildError
+from ..utils.cost_calculator import CostCalculator, ClaudeModel, CostBreakdown
+from ..utils.session_parser import SessionParser
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +28,11 @@ logger = logging.getLogger(__name__)
 class MultiAgentMemoryBankBuilder:
     """Orchestrates multi-agent memory bank building"""
     
-    def __init__(self, root_path: Path):
+    def __init__(self, root_path: Path, enable_cost_tracking: bool = True):
         self.root_path = Path(root_path)
+        self.enable_cost_tracking = enable_cost_tracking
+        self.cost_calculator = CostCalculator(ClaudeModel.CLAUDE_4_SONNET) if enable_cost_tracking else None
+        self.session_parser = SessionParser() if enable_cost_tracking else None
         
     async def build_memory_bank(
         self,
@@ -188,6 +193,30 @@ class MultiAgentMemoryBankBuilder:
                     "fix_success_rate": validation_result.total_issues_fixed / validation_result.total_issues_found if validation_result.total_issues_found > 0 else 0
                 })
             
+            # Calculate build costs if enabled
+            cost_breakdown = None
+            if self.enable_cost_tracking:
+                cost_breakdown = await self._calculate_build_cost(str(repo_path))
+                if cost_breakdown:
+                    await self._call_progress_callback(
+                        progress_callback, 
+                        f"Build cost: ${cost_breakdown.total_cost:.4f} (Input: {cost_breakdown.total_input_tokens:,}, Output: {cost_breakdown.total_output_tokens:,})"
+                    )
+                    
+                    # Add cost metadata
+                    metadata.update({
+                        "cost_tracking": {
+                            "enabled": True,
+                            "total_cost": round(cost_breakdown.total_cost, 4),
+                            "input_tokens": cost_breakdown.total_input_tokens,
+                            "output_tokens": cost_breakdown.total_output_tokens,
+                            "total_tokens": cost_breakdown.total_tokens,
+                            "model_used": self.cost_calculator.model.value if self.cost_calculator else "unknown",
+                            "phase_costs": cost_breakdown.phase_costs,
+                            "component_costs": cost_breakdown.component_costs
+                        }
+                    })
+
             return BuildResult(
                 success=True,
                 output_path=str(output_path),
@@ -206,6 +235,43 @@ class MultiAgentMemoryBankBuilder:
                 metadata={},
                 errors=[str(e)]
             )
+    
+    async def _calculate_build_cost(self, project_path: str) -> Optional[CostBreakdown]:
+        """
+        Calculate the cost of the current build session by analyzing recent Claude Code sessions
+        
+        Args:
+            project_path: Path to the project being analyzed
+            
+        Returns:
+            CostBreakdown with cost analysis or None if tracking failed
+        """
+        if not self.session_parser or not self.cost_calculator:
+            return None
+            
+        try:
+            # Get recent session usage (last hour to capture this build)
+            recent_analysis = self.session_parser.analyze_recent_usage(
+                project_path=project_path,
+                hours=1,  # Look at just the last hour for this build
+                model=self.cost_calculator.model
+            )
+            
+            if recent_analysis["sessions"] > 0:
+                # Add recent session tokens to calculator
+                self.cost_calculator.add_token_usage(
+                    input_tokens=recent_analysis["total_input_tokens"],
+                    output_tokens=recent_analysis["total_output_tokens"],
+                    operation_name="multi_agent_build",
+                    component_name=None
+                )
+                
+                return self.cost_calculator.calculate_cost()
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate build cost: {e}")
+            
+        return None
     
     async def _call_progress_callback(self, progress_callback: Optional[Callable], message: str):
         """Helper to handle both sync and async progress callbacks"""
