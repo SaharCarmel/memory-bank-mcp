@@ -6,6 +6,7 @@ from enum import Enum
 class BuildMode(str, Enum):
     FULL = "full"
     INCREMENTAL = "incremental"
+    MULTI_AGENT = "multi_agent"
 
 class BuildConfig(BaseModel):
     repo_path: str
