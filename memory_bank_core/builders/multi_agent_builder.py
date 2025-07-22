@@ -17,6 +17,7 @@ from typing import Dict, List, Any, Optional, Callable
 from ..models.build_job import BuildConfig, BuildResult, BuildMode
 from ..agents.architecture_agent import ArchitectureAgent, ArchitectureManifest
 from ..agents.orchestration_agent import OrchestrationAgent, OrchestrationResult
+from ..agents.validation_orchestrator import ValidationOrchestrator, ValidationOrchestrationResult
 from ..exceptions.build import BuildError
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ class MultiAgentMemoryBankBuilder:
                 
                 orchestration_agent = OrchestrationAgent(
                     root_path=self.root_path,
-                    max_concurrent_agents=min(5, len(manifest.components))  # Limit concurrent agents
+                    max_concurrent_agents=min(15, len(manifest.components))  # Hard limit of 15 agents
                 )
                 
                 orchestration_result = await orchestration_agent.orchestrate_component_analysis(
@@ -127,11 +128,42 @@ class MultiAgentMemoryBankBuilder:
             else:
                 await self._call_progress_callback(progress_callback, "No components identified - skipping Phase 2")
             
+            # Phase 3: Validation & Auto-Fix (if Phase 2 completed successfully)
+            validation_result = None
+            
+            if orchestration_result and orchestration_result.successful_components > 0:
+                await self._call_progress_callback(progress_callback, "=== PHASE 3: Validation & Auto-Fix ===")
+                
+                validation_orchestrator = ValidationOrchestrator(
+                    root_path=self.root_path,
+                    max_concurrent_validators=min(10, orchestration_result.successful_components)
+                )
+                
+                validation_result = await validation_orchestrator.orchestrate_validation(
+                    manifest=manifest,
+                    orchestration_result=orchestration_result,
+                    repo_path=str(repo_path),
+                    output_base_path=str(output_path),
+                    progress_callback=progress_callback,
+                    max_turns_per_validator=config.max_turns // 4 if hasattr(config, 'max_turns') else 50
+                )
+                
+                # Add validation summary to files_written
+                files_written.append(str(output_path / "validation_summary.json"))
+                
+                await self._call_progress_callback(
+                    progress_callback,
+                    f"Phase 3 complete: {validation_result.components_passed} passed, {validation_result.total_issues_fixed} issues fixed"
+                )
+            else:
+                await self._call_progress_callback(progress_callback, "No successful components - skipping Phase 3")
+            
             # Build metadata
             metadata = {
                 "mode": "multi_agent",
                 "phase_1_complete": True,
                 "phase_2_complete": orchestration_result is not None,
+                "phase_3_complete": validation_result is not None,
                 "architecture_type": manifest.system_type,
                 "total_components": manifest.total_components,
                 "components": [c.name for c in manifest.components],
@@ -143,6 +175,17 @@ class MultiAgentMemoryBankBuilder:
                     "successful_components": orchestration_result.successful_components,
                     "failed_components": orchestration_result.failed_components,
                     "component_analysis_duration": orchestration_result.total_duration_seconds
+                })
+            
+            if validation_result:
+                metadata.update({
+                    "validation_passed": validation_result.components_passed,
+                    "validation_failed": validation_result.components_failed,
+                    "validation_partial": validation_result.components_partial,
+                    "total_issues_found": validation_result.total_issues_found,
+                    "total_issues_fixed": validation_result.total_issues_fixed,
+                    "validation_duration": validation_result.total_duration_seconds,
+                    "fix_success_rate": validation_result.total_issues_fixed / validation_result.total_issues_found if validation_result.total_issues_found > 0 else 0
                 })
             
             return BuildResult(

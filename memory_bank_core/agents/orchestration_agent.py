@@ -33,9 +33,10 @@ class OrchestrationResult:
 class OrchestrationAgent:
     """Orchestrates parallel execution of component agents"""
     
-    def __init__(self, root_path: Path, max_concurrent_agents: int = 5):
+    def __init__(self, root_path: Path, max_concurrent_agents: int = 15):
         self.root_path = Path(root_path)
-        self.max_concurrent_agents = max_concurrent_agents
+        # Hard limit of 15 concurrent agents as requested
+        self.max_concurrent_agents = min(max_concurrent_agents, 15)
         
     async def orchestrate_component_analysis(
         self,
