@@ -226,7 +226,13 @@ class JobManager:
                     raise RuntimeError("Memory bank builder not available. Either enable legacy mode or install claude_code_sdk.")
                 
                 # Create build configuration
-                system_prompt_path = str(self.root_path / "system_prompt.md")
+                system_prompt_path = str(self.root_path / "prompts" / "system_prompt.md")
+                
+                # Check if system prompt exists and print warning if not found
+                if not Path(system_prompt_path).exists():
+                    print(f"WARNING: system_prompt.md not found at {system_prompt_path}")
+                    logger.warning(f"system_prompt.md not found at {system_prompt_path}")
+                
                 config = BuildConfig(
                     repo_path=job.repo_path,
                     output_path=job.output_path,
@@ -301,11 +307,18 @@ class JobManager:
                 
                 # Create build configuration for incremental update
                 output_path = self.root_path / job.memory_bank_name
+                system_prompt_path = str(self.root_path / "prompts" / "system_prompt.md")
+                
+                # Check if system prompt exists and print warning if not found
+                if not Path(system_prompt_path).exists():
+                    print(f"WARNING: system_prompt.md not found at {system_prompt_path}")
+                    logger.warning(f"system_prompt.md not found at {system_prompt_path}")
+                
                 config = BuildConfig(
                     repo_path=job.repo_path,
                     output_path=str(output_path),
                     mode=BuildMode.INCREMENTAL,
-                    system_prompt_path=str(self.root_path / "system_prompt.md"),
+                    system_prompt_path=system_prompt_path,
                     max_turns=5000,
                     auto_restart_on_early_termination=False,  # Temporarily disable to test
                     max_restart_attempts=1  # Reduce to 1 for testing

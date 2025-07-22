@@ -16,7 +16,6 @@ import click
 
 from .services.job_manager import JobManager
 from .models.build_job import BuildJobRequest, BuildJobType, BuildJobStatus
-from .integrations.legacy import LegacyScriptExecutor
 
 
 # Configure logging

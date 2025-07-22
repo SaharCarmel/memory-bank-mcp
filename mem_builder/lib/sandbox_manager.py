@@ -175,9 +175,8 @@ claude-code-sdk
         user_root = self.sandbox.get_user_root_dir()
         memory_bank_core_path = f"{user_root}/memory_bank_core"
         
-        # Use the docs_folder_name as the memory bank name
-        memory_bank_name = docs_folder_name
-        self.logger.info(f"Using memory bank name: {memory_bank_name}")
+        # Memory bank name will be determined based on output directory logic below
+        self.logger.info(f"Docs folder name: {docs_folder_name}")
         
         # Validate project directory exists in sandbox
         project_exists_cmd = f"[ -d '{project_dir}' ] && echo 'exists' || echo 'not_exists'"
@@ -221,9 +220,17 @@ claude-code-sdk
         if memory_bank_output_dir:
             # Ensure the output directory exists
             self.sandbox.process.exec(f"mkdir -p '{memory_bank_output_dir}'")
-            root_path = memory_bank_output_dir
+            # Use parent directory as root_path to avoid duplication
+            import os
+            root_path = os.path.dirname(memory_bank_output_dir)
+            # Use basename of output dir as memory bank name to avoid duplication
+            memory_bank_name = os.path.basename(memory_bank_output_dir)
         else:
             root_path = user_root
+            # Use the docs_folder_name as the memory bank name for default case
+            memory_bank_name = docs_folder_name
+        
+        self.logger.info(f"Using memory bank name: {memory_bank_name}")
         
         # Build the appropriate command
         # Set PYTHONPATH to include the parent directory so memory_bank_core can be imported
@@ -374,11 +381,11 @@ claude-code-sdk
                     
                     # Adaptive polling: faster when getting output, slower when idle
                     if consecutive_empty_polls < 5:
-                        time.sleep(0.5)  # Fast polling when active
+                        time.sleep(1)  # Fast polling when active
                     elif consecutive_empty_polls < 30:
-                        time.sleep(1)    # Normal polling
+                        time.sleep(5)    # Normal polling
                     else:
-                        time.sleep(2)    # Slow polling when idle
+                        time.sleep(10)    # Slow polling when idle
                     
                     retries += 1
                     
@@ -440,5 +447,5 @@ claude-code-sdk
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit with cleanup."""
-        self.cleanup(force_delete=False)
+        self.cleanup(force_delete=True) # TODO: change to False for inspection
         return False  # Don't suppress exceptions

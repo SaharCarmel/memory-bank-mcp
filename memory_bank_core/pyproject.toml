@@ -2,6 +2,7 @@
 name = "memory-bank-core"
 version = "1.0.0"
 description = "Core memory bank building logic extracted from PC Cortex"
+requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0.0",
     "aiofiles>=22.0.0",

@@ -9,7 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable
 import asyncio
-from claude_code_sdk import query, ClaudeCodeOptions, Message
+from claude_code_sdk import query, ClaudeCodeOptions
+from claude_code_sdk.types import SystemMessage
 
 from ..models.build_job import BuildConfig, BuildResult, BuildMode
 
@@ -374,17 +375,19 @@ IMPORTANT: This is attempt {attempt} - please work efficiently to create the cor
             await self._call_progress_callback(progress_callback, "Using minimal tool set to reduce complexity")
         else:
             # Full tool set for comprehensive analysis
-            allowed_tools = ["Read", "Grep", "Glob", "LS", "Write", "Bash", "Edit", "MultiEdit", "Task", "TodoWrite"]
+            allowed_tools = ["Read", "Grep", "Glob", "LS", "Write", "Bash", "Edit", "MultiEdit"]
         
         # Determine permission mode
         permission_mode = config.permission_mode if config else "bypassPermissions"
-        
+        print("--------------------------------")
+        print(system_prompt)
+        print("--------------------------------")
         options = ClaudeCodeOptions(
             max_turns=max_turns,
             system_prompt=system_prompt,
             cwd=str(repo_path),
             allowed_tools=allowed_tools,
-            permission_mode=permission_mode
+            permission_mode=permission_mode,
         )
         
         await self._call_progress_callback(progress_callback, f"Starting memory bank generation with max {max_turns} turns...")
@@ -405,11 +408,7 @@ IMPORTANT: This is attempt {attempt} - please work efficiently to create the cor
                 if message_count % 5 == 0:
                     elapsed = (datetime.now() - conversation_started).total_seconds()
                     await self._call_progress_callback(progress_callback, f"[TURN {message_count}] Processing message {message_count}... (elapsed: {elapsed:.1f}s)")
-                
-                # Log turn milestone warnings
-                if message_count in [35, 38, 39]:
-                    await self._call_progress_callback(progress_callback, f"[WARNING] Approaching turn {message_count} - potential SDK limit at 40")
-                
+
                 # Handle different message types
                 if hasattr(message, 'content'):
                     last_message_type = "content"
@@ -455,6 +454,8 @@ IMPORTANT: This is attempt {attempt} - please work efficiently to create the cor
                     error_msg = str(message.error)
                     await self._call_progress_callback(progress_callback, f"[TURN {message_count}] ERROR: {error_msg}")
                     logger.error(f"Claude Code SDK error at turn {message_count}: {error_msg}")
+                elif isinstance(message, SystemMessage):
+                    await self._call_progress_callback(progress_callback, f"[TURN {message_count}] System Message: {message}")
                 else:
                     last_message_type = f"unknown_{type(message)}"
                     await self._call_progress_callback(progress_callback, f"[TURN {message_count}] Unknown message type: {type(message)}")
@@ -473,6 +474,7 @@ IMPORTANT: This is attempt {attempt} - please work efficiently to create the cor
                 # Log SDK version for debugging
                 try:
                     import claude_code_sdk
+                    print("as")
                     version = getattr(claude_code_sdk, '__version__', 'unknown')
                     await self._call_progress_callback(progress_callback, f"[DEBUG] Claude Code SDK version: {version}")
                 except:
