@@ -161,7 +161,8 @@ Before creating the manifest, use a <component_analysis> section to think throug
         repo_path: str,
         output_path: str,
         progress_callback: Optional[Callable[[str], None]] = None,
-        max_turns: int = 200
+        max_turns: int = 200,
+        cost_calculator: Optional['CostCalculator'] = None
     ) -> ArchitectureManifest:
         """
         Analyze the repository and create architectural manifest
