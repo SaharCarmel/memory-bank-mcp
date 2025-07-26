@@ -6,13 +6,18 @@ from enum import Enum
 class BuildMode(str, Enum):
     FULL = "full"
     INCREMENTAL = "incremental"
+    MULTI_AGENT = "multi_agent"
 
 class BuildConfig(BaseModel):
     repo_path: str
     output_path: str
     mode: BuildMode = BuildMode.FULL
     system_prompt_path: Optional[str] = None
-    max_turns: int = 5000
+    max_turns: int = 1000
+    auto_restart_on_early_termination: bool = True
+    max_restart_attempts: int = 3
+    use_minimal_tools: bool = False  # Try with fewer tools if hitting limits
+    permission_mode: str = "bypassPermissions"  # Allow different permission modes
 
 class BuildResult(BaseModel):
     success: bool

@@ -93,8 +93,8 @@ class RepoManager:
         # Create the custom docs directory
         self.sandbox.process.exec(f"mkdir -p {custom_docs_dir}")
 
-        # Generate diff file in the custom docs directory
-        diff_file_path = os.path.join(custom_docs_dir, "git.diff")
+        # Generate diff file in the project root (where memory_bank_core expects it)
+        diff_file_path = os.path.join(project_dir, "git.diff")
         diff_command = f"cd {project_dir} && git diff {commit_hash} HEAD > {diff_file_path}"
         
         result = self.sandbox.process.exec(diff_command)
