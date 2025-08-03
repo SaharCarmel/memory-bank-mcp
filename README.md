@@ -21,14 +21,15 @@ MemBankBuilder is a command-line tool that analyzes your codebase and generates 
 ### CLI Installation (Recommended)
 
 ```bash
-# Install with UV (recommended)
-uv add memory-bank-builder
+# Clone the repository
+git clone https://github.com/SaharCarmel/memory-bank-mcp.git
+cd memory-bank-mcp/memory_bank_core
 
-# Or with pip
-pip install memory-bank-builder
+# Install dependencies with UV
+uv sync
 
 # Build a memory bank
-memory-bank build /path/to/your/repo
+uv run python -m memory_bank_core build /path/to/your/repo
 ```
 
 ## 📁 What Gets Generated
@@ -65,20 +66,24 @@ memory-bank-builder/
 Perfect for individual use and development:
 
 ```bash
-# Install and use directly
-uv add memory-bank-builder
-memory-bank build /path/to/your/repo
+# Clone and setup
+git clone https://github.com/SaharCarmel/memory-bank-mcp.git
+cd memory-bank-mcp/memory_bank_core
+uv sync
+
+# Use the CLI
+uv run python -m memory_bank_core build /path/to/your/repo
 ```
 
 ### 2. Web Interface (Optional)
 For teams wanting a web dashboard:
 
 ```bash
-# Start backend
-cd backend && uv run python main.py
+# Start backend (from project root)
+cd memory-bank-mcp/backend && uv run python main.py
 
 # Start frontend (separate terminal)
-cd frontend && npm run dev
+cd memory-bank-mcp/frontend && npm run dev
 ```
 
 ## 🔧 Configuration
@@ -106,25 +111,27 @@ OUTPUT_PATH=/data/memory-banks
 
 ## 📖 Usage Examples
 
-### Basic Memory Bank Generation
-
-```python
-from memory_bank_core import CoreMemoryBankBuilder, BuildConfig, BuildMode
-
-builder = CoreMemoryBankBuilder("/output/path") 
-config = BuildConfig(
-    repo_path="/path/to/repo",
-    output_path="/output/memory-bank",
-    mode=BuildMode.FULL
-)
-
-result = await builder.build_memory_bank(config)
-```
-
-### Web API
+### Basic CLI Usage
 
 ```bash
-# Start a build job
+# Clone the repository first
+git clone https://github.com/SaharCarmel/memory-bank-mcp.git
+cd memory-bank-mcp/memory_bank_core
+
+# Install dependencies
+uv sync
+
+# Build a memory bank
+uv run python -m memory_bank_core build /path/to/your/repo --output-name my-project
+```
+
+### Web API (Optional)
+
+```bash
+# Start backend first (from project root)
+cd memory-bank-mcp/backend && uv run python main.py
+
+# Then use the API
 curl -X POST http://localhost:8000/api/memory-banks/build \
   -H "Content-Type: application/json" \
   -d '{"repo_path": "/path/to/repo", "output_name": "my-project"}'
@@ -137,28 +144,31 @@ curl http://localhost:8000/api/jobs/{job_id}
 
 ```bash
 # Build memory bank
-memory-bank build /path/to/repo --output-name my-project
+uv run python -m memory_bank_core build /path/to/repo --output-name my-project
 
 # Update existing memory bank
-memory-bank update /path/to/repo my-project
+uv run python -m memory_bank_core update /path/to/repo my-project
 
 # List all memory banks
-memory-bank list
+uv run python -m memory_bank_core list
 
 # Start background worker
-memory-bank worker --max-jobs 5
+uv run python -m memory_bank_core worker --max-jobs 5
 ```
 
 ## 🤖 Advanced CLI Usage
 
 ```bash
 # Build with custom options
-memory-bank build /path/to/repo \
+uv run python -m memory_bank_core build /path/to/repo \
   --output-name my-project \
-  --mode incremental \
-  --max-turns 5000 \
-  --include-patterns '**/*.py,**/*.js,**/*.md' \
-  --exclude-patterns '**/node_modules/**,**/.git/**'
+  --wait
+
+# List all memory banks
+uv run python -m memory_bank_core list
+
+# Update an existing memory bank
+uv run python -m memory_bank_core update /path/to/repo my-project
 ```
 
 ## 🔍 Memory Bank Structure
