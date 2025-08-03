@@ -1,59 +1,24 @@
 # MemBankBuilder 🧠
 
-**Transform any codebase into a comprehensive memory bank using AI-powered analysis**
+**CLI tool to transform any codebase into a comprehensive memory bank using AI-powered analysis**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-blue?logo=github-actions)](https://github.com/marketplace/actions/memory-bank-builder)
-[![Docker](https://img.shields.io/badge/Docker-Supported-blue?logo=docker)](https://hub.docker.com/r/membank/builder)
 
-MemBankBuilder analyzes your codebase and generates detailed documentation including project context, architecture patterns, technical decisions, and development progress. Perfect for onboarding, knowledge transfer, and maintaining project understanding.
+MemBankBuilder is a command-line tool that analyzes your codebase and generates detailed documentation including project context, architecture patterns, technical decisions, and development progress. Perfect for onboarding, knowledge transfer, and maintaining project understanding.
 
 ## ✨ Features
 
 - **🔍 Deep Code Analysis** - AI-powered repository analysis using Claude
 - **📚 Structured Documentation** - Generates comprehensive memory banks with consistent structure
-- **🌐 Web Dashboard** - Interactive UI for managing and viewing memory banks
-- **⚡ Real-time Updates** - Live build progress and streaming logs
-- **🐳 Self-Hosted** - Deploy on your infrastructure with Docker
-- **🔄 GitHub Action** - Automate memory bank generation in CI/CD
+- **🌐 Web Dashboard** - Optional interactive UI for managing and viewing memory banks
+- **⚡ Real-time Updates** - Live build progress and detailed logging
+- **🖥️ Self-Hosted** - Deploy on your infrastructure
+- **⚙️ Automation-Ready** - Easy integration with CI/CD pipelines
 - **🎯 Multi-Agent System** - Advanced analysis with specialized AI agents
 
 ## 🚀 Quick Start
 
-### GitHub Action (Recommended)
-
-Add to your `.github/workflows/memory-bank.yml`:
-
-```yaml
-name: Build Memory Bank
-on: [push, pull_request]
-
-jobs:
-  memory-bank:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: membank-builder/memory-bank-action@v1
-        with:
-          claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
-          output-path: ./docs/memory-bank
-```
-
-### Docker (Self-Hosted)
-
-```bash
-# Clone the repository
-git clone https://github.com/membank-builder/memory-bank-builder.git
-cd memory-bank-builder
-
-# Start with Docker Compose
-docker-compose up -d
-
-# Access the dashboard
-open http://localhost:3000
-```
-
-### CLI Installation
+### CLI Installation (Recommended)
 
 ```bash
 # Install with UV (recommended)
@@ -87,35 +52,34 @@ your-repo_memory_bank/
 
 ```
 memory-bank-builder/
-├── backend/             # FastAPI server
-├── frontend/            # React dashboard
+├── backend/             # FastAPI server (optional web interface)
+├── frontend/            # React dashboard (optional web interface)
 ├── memory_bank_core/    # Core Python library
-├── action/              # GitHub Action
-├── deployment/          # Docker & K8s configs
 ├── docs/                # Documentation
 └── examples/            # Usage examples
 ```
 
 ## 🌐 Deployment Options
 
-### 1. Docker Compose (Simple)
-Perfect for small teams and personal use:
+### 1. Local CLI (Recommended)
+Perfect for individual use and development:
 
 ```bash
-docker-compose up -d
+# Install and use directly
+uv add memory-bank-builder
+memory-bank build /path/to/your/repo
 ```
 
-### 2. Kubernetes (Enterprise)
-Scalable deployment with Helm:
+### 2. Web Interface (Optional)
+For teams wanting a web dashboard:
 
 ```bash
-helm install membank-builder ./deployment/kubernetes/chart
-```
+# Start backend
+cd backend && uv run python main.py
 
-### 3. Cloud Providers
-- [AWS ECS Guide](docs/deployment/aws.md)
-- [Google Cloud Run Guide](docs/deployment/gcp.md)
-- [Azure Container Instances Guide](docs/deployment/azure.md)
+# Start frontend (separate terminal)
+cd frontend && npm run dev
+```
 
 ## 🔧 Configuration
 
@@ -185,18 +149,16 @@ memory-bank list
 memory-bank worker --max-jobs 5
 ```
 
-## 🤖 GitHub Action Advanced Usage
+## 🤖 Advanced CLI Usage
 
-```yaml
-- uses: membank-builder/memory-bank-action@v1
-  with:
-    claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
-    output-path: ./docs/memory-bank
-    mode: 'incremental'  # or 'full'
-    max-turns: 5000
-    custom-prompt: './custom-prompt.md'
-    include-patterns: '**/*.py,**/*.js,**/*.md'
-    exclude-patterns: '**/node_modules/**,**/.git/**'
+```bash
+# Build with custom options
+memory-bank build /path/to/repo \
+  --output-name my-project \
+  --mode incremental \
+  --max-turns 5000 \
+  --include-patterns '**/*.py,**/*.js,**/*.md' \
+  --exclude-patterns '**/node_modules/**,**/.git/**'
 ```
 
 ## 🔍 Memory Bank Structure
@@ -294,7 +256,7 @@ npm run build                                    # Test production build
 npm run dev                                      # Start development server (localhost:5173)
 ```
 
-**Test Full Integration:**
+**Test Full Integration (Optional Web Interface):**
 ```bash
 # 1. Start backend: cd backend && uv run python main.py
 # 2. Start frontend: cd frontend && npm run dev  
@@ -320,8 +282,8 @@ npm run dev                                      # Start development server (loc
 - [Integration Guide](docs/integrations.md) - CI/CD, Git hooks, and automation
 
 ### Advanced (Optional)
-- [Self-Hosted Deployment](docs/deployment.md) - Docker and enterprise deployment
-- [GitHub Action Development](docs/github-action.md) - Automated CI/CD integration
+- [Web Interface Setup](docs/web-interface.md) - Optional web dashboard deployment
+- [CI/CD Integration](docs/integrations.md) - Automated pipeline integration
 
 ## 🤝 Contributing
 
@@ -343,6 +305,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - [ ] **Integration Ecosystem** - Notion, Confluence, GitBook integrations
 - [ ] **Performance Optimization** - Faster analysis for large repositories
 - [ ] **Collaborative Features** - Team memory bank sharing and collaboration
+- [ ] **Docker Support** - Containerized deployment options
+- [ ] **GitHub Actions** - Automated CI/CD integration
 
 ## ❓ Support
 
