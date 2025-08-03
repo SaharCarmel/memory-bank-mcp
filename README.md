@@ -89,7 +89,7 @@ your-repo_memory_bank/
 memory-bank-builder/
 ├── backend/             # FastAPI server
 ├── frontend/            # React dashboard
-├── core/                # Core Python library
+├── memory_bank_core/    # Core Python library
 ├── action/              # GitHub Action
 ├── deployment/          # Docker & K8s configs
 ├── docs/                # Documentation
@@ -145,7 +145,7 @@ OUTPUT_PATH=/data/memory-banks
 ### Basic Memory Bank Generation
 
 ```python
-from core import CoreMemoryBankBuilder, BuildConfig, BuildMode
+from memory_bank_core import CoreMemoryBankBuilder, BuildConfig, BuildMode
 
 builder = CoreMemoryBankBuilder("/output/path") 
 config = BuildConfig(
@@ -243,7 +243,7 @@ cd backend && uv sync
 cd frontend && npm install
 
 # Core library
-cd core && uv sync
+cd memory_bank_core && uv sync
 ```
 
 ### Running Locally
@@ -256,16 +256,72 @@ cd backend && uv run python main.py
 cd frontend && npm run dev
 
 # Test CLI
-cd core && uv run python -m core build /path/to/test/repo
+cd memory_bank_core && uv run python -m memory_bank_core build /path/to/test/repo
 ```
+
+## 🧪 Testing Your Setup
+
+### Quick Smoke Test
+```bash
+# Test all components quickly
+cd backend && uv run python -c "from app.services.memory_bank_builder import MemoryBankBuilder; print('✅ Backend OK')" && \
+cd ../frontend && npm run build > /dev/null 2>&1 && echo "✅ Frontend OK" && \
+cd ../memory_bank_core && uv run python -m memory_bank_core --help > /dev/null && echo "✅ CLI OK" && \
+echo "🎉 All systems working!"
+```
+
+### Individual Component Tests
+
+**Test CLI:**
+```bash
+cd memory_bank_core
+uv run python -m memory_bank_core --help        # Show available commands
+uv run python -m memory_bank_core list          # List existing memory banks
+```
+
+**Test Backend:**
+```bash
+cd backend
+uv run python main.py &                         # Start server
+curl http://localhost:8000/docs                 # Open API documentation
+curl http://localhost:8000/api/memory-banks     # Test API endpoint
+```
+
+**Test Frontend:**
+```bash
+cd frontend
+npm run build                                    # Test production build
+npm run dev                                      # Start development server (localhost:5173)
+```
+
+**Test Full Integration:**
+```bash
+# 1. Start backend: cd backend && uv run python main.py
+# 2. Start frontend: cd frontend && npm run dev  
+# 3. Open http://localhost:5173 in browser
+# 4. Create a memory bank through the web interface
+```
+
+### Expected Results
+- ✅ CLI shows help and commands
+- ✅ Backend starts on port 8000 
+- ✅ Frontend builds without errors
+- ✅ API docs accessible at `/docs`
+- ✅ Web dashboard loads at localhost:5173
 
 ## 📚 Documentation
 
-- [API Documentation](docs/api.md)
-- [Self-Hosted Deployment](docs/deployment.md)
-- [Custom Agent Development](docs/agents.md)
-- [Configuration Reference](docs/configuration.md)
-- [Troubleshooting Guide](docs/troubleshooting.md)
+### Getting Started
+- [CLI Usage Guide](docs/cli-usage.md) - Complete CLI reference and examples
+- [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
+
+### Examples & Integration
+- [Example Projects](examples/) - Sample projects and generated memory banks
+- [Integration Guide](docs/integrations.md) - CI/CD, Git hooks, and automation
+
+### Advanced (Optional)
+- [Self-Hosted Deployment](docs/deployment.md) - Docker and enterprise deployment
+- [GitHub Action Development](docs/github-action.md) - Automated CI/CD integration
 
 ## 🤝 Contributing
 

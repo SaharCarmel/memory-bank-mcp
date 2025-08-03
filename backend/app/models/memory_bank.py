@@ -1,5 +1,5 @@
 # Import models from the core module
-from core.models.memory_bank import (
+from memory_bank_core.models.memory_bank import (
     MemoryBankFile,
     Task, 
     ChangelogEntry,
@@ -9,7 +9,7 @@ from core.models.memory_bank import (
     MemoryBankSummary
 )
 
-from core.models.build_job import (
+from memory_bank_core.models.build_job import (
     BuildJobStatus,
     BuildJobType,
     BuildJob,

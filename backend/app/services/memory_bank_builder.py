@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-from core import CoreMemoryBankBuilder, BuildConfig, BuildResult, BuildMode
+from memory_bank_core import CoreMemoryBankBuilder, BuildConfig, BuildResult, BuildMode
 
 logger = logging.getLogger(__name__)
 
