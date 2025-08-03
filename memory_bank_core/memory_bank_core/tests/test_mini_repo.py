@@ -14,30 +14,15 @@ def create_microservices_test_repo(base_path: Path):
     repo_path = base_path / "test_microservices"
     repo_path.mkdir(parents=True, exist_ok=True)
     
-    # Create docker-compose.yml
-    docker_compose = """version: '3.8'
-services:
-  user-service:
-    build: ./services/user-service
-    ports:
-      - "3001:3000"
-  
-  product-service:
-    build: ./services/product-service
-    ports:
-      - "3002:3000"
-  
-  order-service:
-    build: ./services/order-service
-    ports:
-      - "3003:3000"
-  
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
+    # Create API configuration for services
+    api_config = """# Service Configuration
+# This microservices architecture runs the following services:
+# - user-service: Port 3001
+# - product-service: Port 3002  
+# - order-service: Port 3003
+# - frontend: Port 80
 """
-    (repo_path / "docker-compose.yml").write_text(docker_compose)
+    (repo_path / "api-config.md").write_text(api_config)
     
     # Create services
     services = ["user-service", "product-service", "order-service"]
@@ -71,15 +56,16 @@ app.listen(3000, () => {{
 """
         (service_path / "index.js").write_text(index_js)
         
-        # Dockerfile
-        dockerfile = f"""FROM node:16-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-CMD ["node", "index.js"]
+        # Service deployment notes
+        deploy_notes = f"""# {service} Deployment
+
+This service requires:
+- Node.js 16+
+- npm install to install dependencies
+- Run with: node index.js
+- Default port: 3000
 """
-        (service_path / "Dockerfile").write_text(dockerfile)
+        (service_path / "DEPLOY.md").write_text(deploy_notes)
     
     # Create frontend
     frontend_path = repo_path / "frontend"

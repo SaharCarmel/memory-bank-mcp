@@ -283,7 +283,7 @@ Your goal is to create an architectural manifest that will guide other agents in
 
 Important guidelines:
 1. Start by exploring the root directory structure efficiently
-2. Look for key configuration files (setup.py, CMakeLists.txt, docker-compose.yml, package.json, etc.)
+2. Look for key configuration files (setup.py, CMakeLists.txt, package.json, service configs, etc.)
 3. For large repositories like PyTorch:
    - Focus on top-level directories first
    - Don't dive too deep into individual files initially
@@ -293,7 +293,7 @@ Important guidelines:
 5. Write the manifest to: {output_path}/architecture_manifest.md
 
 EFFICIENCY TIPS:
-- Use Glob patterns to quickly identify structure (e.g., "*/setup.py", "*/CMakeLists.txt")
+- Use Glob patterns to quickly identify structure (e.g., "*/setup.py", "*/CMakeLists.txt", "*/package.json")
 - Read only key files that help identify architecture
 - Don't analyze individual source files unless necessary
 - Aim for 10-20 major components for large codebases

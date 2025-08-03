@@ -25,7 +25,7 @@ Phase 3: Validation Agents (concurrent) → validation + auto-fix
 - [x] Create `ArchitectureAgent` class in `/memory_bank_core/agents/architecture_agent.py`
 - [x] Define `architecture_manifest.md` schema
 - [ ] Implement component detection logic:
-  - [ ] Service boundary detection (docker-compose, k8s manifests)
+  - [ ] Service boundary detection (service configuration files)
   - [ ] Frontend application detection (package.json patterns)
   - [ ] Shared library detection
   - [ ] Monolith layer detection
