@@ -10,9 +10,9 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from memory_bank_core.agents.architecture_agent import ArchitectureAgent
-from memory_bank_core.builders.multi_agent_builder import MultiAgentMemoryBankBuilder
-from memory_bank_core.models.build_job import BuildConfig, BuildMode
+from core.agents.architecture_agent import ArchitectureAgent
+from core.builders.multi_agent_builder import MultiAgentMemoryBankBuilder
+from core.models.build_job import BuildConfig, BuildMode
 
 
 async def test_architecture_agent():

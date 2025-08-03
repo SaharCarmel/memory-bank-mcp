@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "pc-cortex": {
+      "command": "uv",
+      "args": [
+        "run", 
+        "python", 
+        "server.py"
+      ],
+      "cwd": "/path/to/mcp_server",
+      "env": {
+        "PC_CORTEX_BACKEND_URL": "http://localhost:8888"
+      }
+    }
+  }
+}

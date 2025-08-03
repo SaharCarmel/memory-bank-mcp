@@ -8,8 +8,8 @@ from app.models.memory_bank import (
     BuildJobType,
     BuildJobRequest
 )
-from memory_bank_core.services import JobManager
-from memory_bank_core.integrations.legacy import LegacyScriptExecutor
+from core.services import JobManager
+from core.integrations.legacy import LegacyScriptExecutor
 
 logger = logging.getLogger(__name__)
 

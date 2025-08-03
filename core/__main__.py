@@ -17,7 +17,7 @@ try:
     from .main import cli
 except ImportError:
     # Fall back to absolute import (when run directly)
-    from memory_bank_core.main import cli
+    from core.main import cli
 
 if __name__ == "__main__":
     cli()

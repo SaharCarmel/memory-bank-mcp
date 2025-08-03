@@ -47,15 +47,33 @@ Thumbs.db
 # Memory bank outputs
 *_memory_bank/
 memory_bank_output/
-*.json
-*.txt
 
 # Logs
 *.log
+logs/
 
 # Temporary files
 *.tmp
 *.temp
+results/
+sandboxes/
+*.pem
+
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Cache directories
+.cache/
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.production
 
 # Demo repository for testing
 demo_repo/

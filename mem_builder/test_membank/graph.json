@@ -1,0 +1,19 @@
+{
+  "nodes": [],
+  "edges": [],
+  "metadata": {
+    "version": "1.0.0",
+    "created_at": "2025-07-21T00:51:01.153201",
+    "source_path": "/private/var/folders/pz/m2m3ljc92m7fqnc0xkh_gmb80000gn/T/membank_local_9gat3yqu/repo",
+    "generator": "pc_cortex_core_builder",
+    "files_written": [
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/projectbrief.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/productContext.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/systemPatterns.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/techContext.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/activeContext.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/progress.md",
+      "/Users/saharcarmel/Code/personal/future/pc_cortex/mem_builder/test_membank/memory-bank/tasks/_index.md"
+    ]
+  }
+}
